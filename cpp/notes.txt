@@ -1,0 +1,4 @@
+
+ cmake .. && make && ./src/cyphering
+
+ https://google.github.io/styleguide/cppguide.html#Function_Names

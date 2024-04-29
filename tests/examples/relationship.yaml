@@ -1,0 +1,49 @@
+nodes:
+
+  - label: Country
+    alias: country
+    mode: create
+    attr:
+      on_create:
+        name: $.name
+        created_on: timestamp()
+      on_update:
+        updated_on: timestamp()
+    index:
+      - name
+    constraints:
+      - name
+
+  - label: City
+    alias: city
+    mode: create
+    attr:
+      on_create:
+        name: $.name
+        created_on: timestamp()
+      on_update:
+        updated_on: timestamp()
+    index:
+      - $.name
+    constraints:
+      - $.name
+
+rels:
+
+  - label: HAS_CITY
+    alias: hascity
+    mode: create
+    type: $country -> $city
+    attr:
+      on_create:
+        created_on: timestamp()
+        example0: $.name
+        example1: $country.example1
+        example2: $city.example2
+      on_update:
+        updated_on: timestamp()
+    index:
+      - $.created_on
+    constraints:
+      - exists($.created_on)
+      - $.created_on is unique
