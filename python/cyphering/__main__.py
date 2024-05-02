@@ -1,6 +1,87 @@
+import logging
+import click
 import cyphering
 
-def main():
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+
+@click.command()
+@click.option(
+    '--model', 
+    required=True, 
+    help='Model filename', 
+    type=click.File('rb')
+)
+@click.option(
+    '--template', 
+    required=True, 
+    help='template filename to use from "searchpath"'
+)
+@click.option(
+    '--searchpath', 
+    required=False, 
+    help='Where to search templates, will default to builtin path', 
+    type=click.Path(exists=True), 
+    default=cyphering.DEFAULT_SEARCH_PATH
+)
+@click.option(
+    '--output', 
+    required=True, 
+    help='Output filename', 
+    type=click.Path(exists=True)
+)
+def main(model, template, searchpath, output):
+    try:
+        render(model, template, searchpath, output)
+    except Exception as e:
+        logging.exception('got an error during parsing')
+
+
+def render(model, template, searchpath, output):
+    data = cyphering.read_yaml(model)
+
+    # model
+    model = cyphering.ModelT()
+
+    # read nodes
+    elements = data.nodes
+    res = cyphering.parse_nodes(elements)
+    model.nodes = res
+
+    # read rels
+    elements = data.rels
+    res = cyphering.parse_rels(elements)
+    model.rels = res
+
+    # reference map
+    model.alias_map = {
+        e.alias: e for e in model.nodes + model.rels
+    }
+
+    render = cyphering.render_model(
+       template, searchpath=searchpath, model=model
+    )
+
+    # expand model nodes and rels attrs
+    cyphering.expand_map(model.nodes + model.rels)
+
+    # expand model nodes and rels indexes
+    cyphering.expand_key(model.nodes + model.rels)
+
+    # expand model nodes and rels indexes
+    cyphering.expand_index(model.nodes + model.rels)
+
+    # expand model nodes and rels constraint
+    cyphering.expand_constraint(model.nodes + model.rels)
+
+    # expand relationship type
+    cyphering.expand_rels(model.rels)
+
+
+def __():
     # TODO: validate by using a schema
 
     filename = "../tests/model/test0.yaml"

@@ -12,6 +12,8 @@ from dotwiz import DotWiz
 
 from . import typedefs
 
+DEFAULT_SEARCH_PATH = pathlib.Path(__file__).parent.absolute().as_posix()
+
 # utilities
 
 def read_yaml(filename: str, dotted: bool=True) -> Dict[str, Any]:
@@ -267,7 +269,7 @@ helpers = {
 
 # render
 
-def render_model(template: str, searchpath: str='.', **kwargs) -> None:
+def render_model(template: str, searchpath: str=DEFAULT_SEARCH_PATH, **kwargs) -> None:
     searchpath = pathlib.Path(searchpath).resolve().absolute()
     loader = jinja2.FileSystemLoader(searchpath=searchpath.as_posix())
     env = jinja2.Environment(loader=loader)
