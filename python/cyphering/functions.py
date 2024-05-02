@@ -12,7 +12,7 @@ from dotwiz import DotWiz
 
 from . import typedefs
 
-DEFAULT_SEARCH_PATH = pathlib.Path(__file__).parent.absolute().as_posix()
+DEFAULT_SEARCH_PATH = (pathlib.Path(__file__).parent / 'templates').resolve().absolute().as_posix()
 
 # utilities
 

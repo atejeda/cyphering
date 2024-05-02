@@ -1,4 +1,6 @@
 import logging
+import pathlib
+
 import click
 import cyphering
 
@@ -8,12 +10,14 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
+logger = logging.getLogger()
+
 @click.command()
 @click.option(
     '--model', 
     required=True, 
     help='Model filename', 
-    type=click.File('rb')
+    #type=click.File('rb')
 )
 @click.option(
     '--template', 
@@ -30,8 +34,7 @@ logging.basicConfig(
 @click.option(
     '--output', 
     required=True, 
-    help='Output filename', 
-    type=click.Path(exists=True)
+    help='Output filename',
 )
 def main(model, template, searchpath, output):
     try:
@@ -41,6 +44,15 @@ def main(model, template, searchpath, output):
 
 
 def render(model, template, searchpath, output):
+    model = pathlib.Path(model).resolve().absolute().as_posix()
+    output = pathlib.Path(output).resolve().absolute().as_posix()
+
+    logger.info('--')
+    logger.info(model)
+    logger.info(template)
+    logger.info(searchpath)
+    logger.info(output)
+
     data = cyphering.read_yaml(model)
 
     # model
@@ -61,10 +73,6 @@ def render(model, template, searchpath, output):
         e.alias: e for e in model.nodes + model.rels
     }
 
-    render = cyphering.render_model(
-       template, searchpath=searchpath, model=model
-    )
-
     # expand model nodes and rels attrs
     cyphering.expand_map(model.nodes + model.rels)
 
@@ -79,6 +87,15 @@ def render(model, template, searchpath, output):
 
     # expand relationship type
     cyphering.expand_rels(model.rels)
+
+    # render
+
+    render = cyphering.render_model(
+       template, searchpath=searchpath, model=model
+    )
+
+    with open(output, 'w') as file:
+        file.write(render)
 
 
 def __():
