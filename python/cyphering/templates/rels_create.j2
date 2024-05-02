@@ -1,3 +1,5 @@
+UNWIND $entries AS entry
+
 {% set rels = model.rels -%}
 {% set nodes = cyphering_get_deps(model.rels, model )%}
 

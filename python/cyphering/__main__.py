@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import glob
 
 import click
 import cyphering
@@ -43,17 +44,18 @@ def main(model, template, searchpath, output):
         logging.exception('got an error during parsing')
 
 
-def render(model, template, searchpath, output):
-    model = pathlib.Path(model).resolve().absolute().as_posix()
+def render(modelfile, template, searchpath, output):
+    modelfile = pathlib.Path(modelfile).resolve().absolute().as_posix()
     output = pathlib.Path(output).resolve().absolute().as_posix()
+    searchpath = pathlib.Path(searchpath).resolve().absolute().as_posix()
 
     logger.info('--')
-    logger.info(model)
+    logger.info(modelfile)
     logger.info(template)
     logger.info(searchpath)
     logger.info(output)
 
-    data = cyphering.read_yaml(model)
+    data = cyphering.read_yaml(modelfile)
 
     # model
     model = cyphering.ModelT()
@@ -90,13 +92,41 @@ def render(model, template, searchpath, output):
 
     # render
 
-    render = cyphering.render_model(
-       template, searchpath=searchpath, model=model
-    )
+    torender = []
 
-    with open(output, 'w') as file:
-        file.write(render)
+    if template.lower() == 'all':
 
+        outputdir = pathlib.Path(output)
+        if outputdir.is_file():
+            outputdir = output.parent
+
+        modelfile_name = pathlib.Path(modelfile).stem
+        searchpath_star = (pathlib.Path(searchpath) / '*').as_posix()
+        
+        templates = glob.glob(searchpath_star)
+        templates = sorted(templates)
+        
+        for template in templates:
+            template_path = pathlib.Path(template)
+            template_name = template_path.stem
+            template_file = template_path.name
+
+            output_filename = f'{modelfile_name}.{template_name}.cypher'
+            output = (outputdir / output_filename).as_posix()
+            torender.append((template_file, searchpath, modelfile, output))
+    else:
+        torender.append((template, searchpath, modelfile, output))
+
+    for template, searchpath, modelfile, output in torender:
+        logger.info('%s %s %s %s',template, searchpath, modelfile, output)
+
+        render = cyphering.render_model(
+           template, searchpath=searchpath, model=model
+        )
+
+        with open(output, 'w') as file:
+            file.write(render)
+    
 
 def __():
     # TODO: validate by using a schema

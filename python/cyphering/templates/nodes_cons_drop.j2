@@ -1,9 +1,6 @@
-// drop node constraint
-
 {% set nodes = model.nodes -%}
 
 {% for node in nodes %}
-// {{ node.label.lower() }}
 
 {% set list = cyphering_fmt_list(node.alias.lower(), node.attr.expanded_key) %}
 {% if list %}

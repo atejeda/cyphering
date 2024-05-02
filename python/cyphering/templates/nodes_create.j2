@@ -1,3 +1,5 @@
+UNWIND $entries AS entry
+
 {% set nodes = model.nodes -%}
 {% set nodes_match = cyphering_get_match(nodes) -%}
 {% set nodes_create = cyphering_get_create(nodes) -%}

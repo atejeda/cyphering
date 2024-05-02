@@ -1,9 +1,7 @@
-// create relation indexes indexes
-
 {% set rels = model.rels -%}
 {% for rel in rels %}
 {% set list = cyphering_fmt_list(rel.alias.lower(), rel.expanded_index, joiner=', ') %}
 {% if list %}
-CREATE INDEX rel_{{ rel.alias.lower() }}_index IF NOT EXISTS FOR ()-[{{ rel.alias.lower() }}:{{ rel.label }}]-() ON ({{ list }});
+DROP INDEX rel_{{ rel.alias.lower() }}_index IF EXISTS;
 {% endif %}
 {% endfor %}
