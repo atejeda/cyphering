@@ -1,0 +1,4 @@
+{% set nodes = model.nodes -%}
+{% for node in nodes %}
+MATCH ({{ node.alias }}: {{ node.label }}) DETACH DELETE {{ node.alias }};
+{% endfor %}

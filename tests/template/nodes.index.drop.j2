@@ -1,0 +1,9 @@
+// drop node indexes
+
+{% set nodes = model.nodes -%}
+{% for node in nodes %}
+{% set list = cyphering_fmt_list('n', node.expanded_index) %}
+{% if list %}
+DROP INDEX node_{{ node.alias.lower() }}_index IF EXISTS;
+{% endif %}
+{% endfor %}

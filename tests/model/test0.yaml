@@ -1,0 +1,79 @@
+nodes:
+
+  - label: Continent
+    alias: continent
+    mode: match
+    attr:
+      key:
+        name: ${entry}.name
+
+  - label: Country
+    alias: country
+    mode: create
+    attr:
+      key:
+        name: ${entry}.name
+      on_create:
+        created_on: timestamp()
+      on_update:
+        updated_on: timestamp()
+    index:
+      - name
+    constraint:
+      - ASSERT ${this}.name IS UNIQUE
+      - ASSERT ${this}.created_on IS UNIQUE
+
+  - label: City
+    alias: city
+    mode: merge
+    attr:
+      key:
+        name: ${entry}.name
+      on_create:
+        created_on: timestamp()
+      on_update:
+        updated_on: timestamp()
+    index:
+      - name
+    constraint:
+      - ASSERT ${this}.name IS UNIQUE
+
+rels:
+
+  - label: HAS_CITY
+    alias: hascity
+    mode: create
+    reltype: ${country} -> ${city}
+    attr:
+      on_create:
+        created_on: timestamp()
+        composed: ${country}.name + '_' + ${city}.name
+        country: ${country}.name
+        city: ${city}.name
+    index:
+      - created_on
+      - country
+      - city
+    constraint:
+      - exists(${this}.created_on)
+      - ${this}.created_on is unique
+
+  - label: BELONGS_TO
+    alias: belongsto
+    mode: merge
+    reltype: ${country} <- ${city}
+    attr:
+      on_create:
+        created_on: timestamp()
+        composed: ${country}.name + '_' + ${city}.name
+        country: ${country}.name
+        city: ${city}.name
+      on_update:
+        updated_on: timestamp()
+    index:
+      - created_on
+      - country
+      - city
+    constraint:
+      - exists(${this}.created_on)
+      - ${this}.created_on is unique

@@ -1,0 +1,57 @@
+{% set rels = model.rels -%}
+{% set nodes = cyphering_get_deps(model.rels, model )%}
+
+{% if rels %}
+
+// match
+
+{% for node in nodes %}
+MATCH (
+    {{ node.alias }}: {{ node.label }} {
+        {%- for key, val in node.attr.expanded_key.items() %}
+        {{ key }}: {{ val }}{{ "," if not loop.last else "" }}
+        {%- endfor %}
+    }
+)
+{% endfor %}
+
+// relationships
+
+WITH
+{%- for node in nodes %}
+{{ node.alias }}{{ "," if not loop.last else "" }}
+{%- endfor %}
+CALL {
+
+    {% for rel in rels %}
+    {% set deps = cyphering_get_deps([rel], model)%}
+
+    WITH {% for dep in deps %}
+    {{- dep.alias }}{{ ", " if not loop.last else "" }}
+    {%- endfor %}
+    WITH {% for dep in deps %}
+    {{- dep.alias }}{{ ", " if not loop.last else "" }}
+    {%- endfor %}
+    MERGE ({{ rel.expanded_reltype_nodes[0] }})-[{{ rel.alias.lower() }}:{{ rel.label }}]{{ rel.expanded_reltype_dir }}({{ rel.expanded_reltype_nodes[1] }})
+    {%- set properties_create = cyphering_join_dicts(rel.attr.expanded_on_create, rel.attr.expanded_on_update) %}
+    {%- set properties_update = rel.attr.expanded_on_update %}
+    {%- if properties_create %}
+    ON CREATE SET
+        {%- for key, val in properties_create.items() %}
+        {{ rel.alias }}.{{ key }} = {{ val }}{{ "," if not loop.last else "" }}
+        {%- endfor %}
+    {%- endif %}
+    {%- if properties_update %}
+    ON MATCH SET
+        {%- for key, val in properties_update.items() %}
+        {{ rel.alias }}.{{ key }} = {{ val }}{{ "," if not loop.last else "" }}
+        {%- endfor %}
+    {%- endif %}
+    RETURN null AS void
+
+    {{ "UNION" if not loop.last else "" }}
+
+    {% endfor %}
+}
+RETURN void
+{% endif %}

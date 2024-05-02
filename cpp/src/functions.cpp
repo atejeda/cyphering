@@ -5,6 +5,7 @@
 
 // utils
 
+// TODO all to lower instead...?
 std::string LowerFirst(const std::string& str) {
     std::string result = str;
 
