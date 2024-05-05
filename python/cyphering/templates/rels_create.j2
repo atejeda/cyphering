@@ -34,7 +34,7 @@ CALL {
     WITH {% for dep in deps %}
     {{- dep.alias }}{{ ", " if not loop.last else "" }}
     {%- endfor %}
-    MERGE ({{ rel.expanded_reltype_nodes[0] }})-[{{ rel.alias.lower() }}:{{ rel.label }}]{{ rel.expanded_reltype_dir }}({{ rel.expanded_reltype_nodes[1] }})
+    MERGE ({{ rel.expanded_reltype_nodes[0] }})-[{{ rel.alias }}:{{ rel.label }}]{{ rel.expanded_reltype_dir }}({{ rel.expanded_reltype_nodes[1] }})
     {%- set properties_create = cyphering_join_dicts(rel.attr.expanded_on_create, rel.attr.expanded_on_update) %}
     {%- set properties_update = rel.attr.expanded_on_update %}
     {%- if properties_create %}
