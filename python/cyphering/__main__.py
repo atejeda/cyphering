@@ -4,6 +4,7 @@ import glob
 
 import click
 import cyphering
+import cyphering.typedefs
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -89,6 +90,24 @@ def render(modelfile, template, searchpath, output):
 
     # expand relationship type
     cyphering.expand_rels(model.rels)
+
+    # sanity checks
+    elements = model.nodes + model.rels
+
+    # aliases (all)
+    # aliases = set([ a for e in elements for a in e.depends_on ])
+    for e in elements:
+        for a in e.depends_on:
+            if a not in model.alias_map:
+                message = f'Missing alias reference "{a}" for {e}'
+                raise cyphering.typedefs.CypheringModelException(message)
+
+    # modes (all)
+    valid_modes = ['match', 'merge', 'create']
+    for e in elements:
+        if e.mode.lower() not in valid_modes:
+            message = f'Not a valid mode "{e.mode}" for: {e}'
+            raise cyphering.typedefs.CypheringModelException(message)
 
     # render
 
