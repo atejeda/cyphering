@@ -2,8 +2,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,6 +16,76 @@ import (
 )
 
 // TODO, propagate errors back to the user (cmd)
+
+func RenderModel(templateFile string, outputFile string, data interface{}) error {
+
+	funcMap := template.FuncMap{
+		"ToUpper":            strings.ToUpper,
+		"ToLower":            strings.ToLower,
+		"CypheringGetMatch":  CypheringGetMatch,
+		"CypheringGetMerge":  CypheringGetMerge,
+		"CypheringGetCreate": CypheringGetCreate,
+		"CypheringFmtList":   CypheringFmtList,
+		"CypheringMergeMaps": CypheringMergeMaps,
+		"CypheringGetDeps":   CypheringGetDeps,
+		"CypheringGetNode":   CypheringGetNode,
+	}
+
+	output, err := os.Create(outputFile)
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	template, err := template.ParseFiles(templateFile)
+	if err != nil {
+		return err
+	}
+
+	if err := template.Funcs(funcMap).Execute(output, data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validations
+
+func ValidateModel(model *ModelT) error {
+	elements := append(model.Nodes, model.Rels...)
+
+	// mode validation
+
+	for _, e := range elements {
+		// TODO, use an enum to validate the mode (at parsing time)
+		mode := strings.ToLower(e.Mode)
+		validModes := []string{"match", "merge", "create"}
+		valid := false
+		for _, validMode := range validModes {
+			if mode == validMode {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			message := fmt.Sprintf("Invalid mode '%s' for %v", e.Mode, e)
+			return errors.New(message)
+		}
+	}
+
+	// alias reference validation
+
+	for _, e := range elements {
+		for a := range e.DependsOn {
+			if _, exists := CypheringGetNode(a, model); !exists {
+				message := fmt.Sprintf("Alias reference '%s' not found for %v", a, e)
+				return errors.New(message)
+			}
+		}
+	}
+
+	return nil
+}
 
 // utilities
 
@@ -146,8 +219,16 @@ func ExpandModel(model *ModelT) {
 	// expand nodes
 	ExpandNodes(model.Nodes)
 
+	for _, n := range model.Nodes {
+		model.AliasMap[n.Alias] = n
+	}
+
 	// expand rels
 	ExpandRels(model.Rels)
+
+	for _, n := range model.Rels {
+		model.AliasMap[n.Alias] = n
+	}
 }
 
 func ExpandNodes(nodes []NodeT) {
@@ -263,4 +344,83 @@ func ExpandRelDir(strval string) ([]string, string) {
 	}
 
 	return relnodes, reldir
+}
+
+// helpers
+
+func CypheringGetMatch(nodes []NodeT) []NodeT {
+	container := []NodeT{}
+	for _, n := range nodes {
+		if strings.ToLower(n.Mode) == "match" {
+			container = append(container, n)
+		}
+	}
+	return container
+}
+
+func CypheringGetMerge(nodes []NodeT) []NodeT {
+	container := []NodeT{}
+	for _, n := range nodes {
+		if strings.ToLower(n.Mode) == "merge" {
+			container = append(container, n)
+		}
+	}
+	return container
+}
+
+func CypheringGetCreate(nodes []NodeT) []NodeT {
+	container := []NodeT{}
+	for _, n := range nodes {
+		if strings.ToLower(n.Mode) == "create" {
+			container = append(container, n)
+		}
+	}
+	return container
+}
+
+func CypheringFmtList(prefix string, list []string, separator string, joiner string) string {
+	outputList := []string{}
+
+	for _, e := range list {
+		outputList = append(
+			outputList,
+			fmt.Sprintf("%s%s%s", prefix, separator, e),
+		)
+	}
+
+	return strings.Join(outputList, joiner)
+}
+
+func CypheringMergeMaps(map1, map2 map[string]interface{}) map[string]interface{} {
+	mergedMap := make(map[string]interface{})
+	for k, v := range map1 {
+		mergedMap[k] = v
+	}
+	for k, v := range map2 {
+		mergedMap[k] = v
+	}
+	return mergedMap
+}
+
+func CypheringGetDeps(nodes []NodeT, model ModelT) []NodeT {
+	dependenciesSet := map[string]interface{}{}
+
+	for _, n := range nodes {
+		for k := range n.DependsOn {
+			dependenciesSet[k] = nil
+		}
+	}
+
+	dependenciesList := []NodeT{}
+	for k := range dependenciesSet {
+		n, _ := CypheringGetNode(k, &model)
+		dependenciesList = append(dependenciesList, n)
+	}
+
+	return dependenciesList
+}
+
+func CypheringGetNode(alias string, model *ModelT) (NodeT, bool) {
+	n, e := model.AliasMap[alias]
+	return n, e
 }

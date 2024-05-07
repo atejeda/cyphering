@@ -1,0 +1,3 @@
+
+## Resources
+- https://pkg.go.dev/text/template

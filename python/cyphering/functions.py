@@ -39,7 +39,7 @@ def render_clean(text: str) -> str:
 # utils
 
 def lower_first(strval: str):
-    return strval[0].lower() + result[1:]
+    return strval[0].lower() + strval[1:]
 
 # read nodes
 
