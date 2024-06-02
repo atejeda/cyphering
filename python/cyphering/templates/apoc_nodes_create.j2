@@ -1,0 +1,70 @@
+{% set nodes = model.nodes -%}
+{% set nodes_match = cyphering_get_match(nodes) -%}
+{% set nodes_create = cyphering_get_create(nodes) -%}
+{% set nodes_merge = cyphering_get_merge(nodes) -%}
+
+call apoc.periodic.iterate(
+    "
+    UNWIND $entries AS entry
+    return entry
+    ",
+    "
+    {# create #}
+    {% if nodes_create %}
+    // create
+
+    {% for node in nodes_create %}
+    {%- set properties_create = cyphering_join_dicts(node.attr.expanded_on_create, node.attr.expanded_on_update) %}
+    {%- set properties_update = node.attr.expanded_on_update %}
+    CREATE (
+        {{ node.alias }}: {{ node.label }} {
+            {%- for key, val in node.attr.expanded_key.items() %}
+            {{ key }}: {{ val }}{{ "," if not loop.last else "" }}
+            {%- endfor %}
+        }
+    )
+    {%- if properties_create %}
+    SET
+        {%- for key, val in properties_create.items() %}
+        {{ node.alias }}.{{ key }} = {{ val }}{{ "," if not loop.last else "" }}
+        {%- endfor %}
+    {% endif %}
+
+    {{ "UNION" if not loop.last else "" }}
+    {% endfor %}
+    {% endif %}
+
+    {# merge #}
+    {% if nodes_merge %}
+    // merge
+
+    {% for node in nodes_merge %}
+    {%- set properties_create = cyphering_join_dicts(node.attr.expanded_on_create, node.attr.expanded_on_update) %}
+    {%- set properties_update = node.attr.expanded_on_update %}
+
+    MERGE (
+        {{ node.alias }}: {{ node.label }} {
+            {%- for key, val in node.attr.expanded_key.items() %}
+            {{ key }}: {{ val }}{{ "," if not loop.last else "" }}
+            {%- endfor %}
+        }
+    )
+    {%- if properties_create %}
+    ON CREATE SET
+        {%- for key, val in properties_create.items() %}
+        {{ node.alias }}.{{ key }} = {{ val }}{{ "," if not loop.last else "" }}
+        {%- endfor %}
+    {%- endif %}
+    {%- if properties_update %}
+    ON MATCH SET
+        {%- for key, val in properties_update.items() %}
+        {{ node.alias }}.{{ key }} = {{ val }}{{ "," if not loop.last else "" }}
+        {%- endfor %}
+    {%- endif %}
+
+    {% endfor %}
+    {% endif %}
+
+    ",
+    {batchSize:10000, params: {entries: $entries}}
+)
